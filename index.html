@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>password</title>
+  <script>
+  var strToMatch = 'i89l1qiqz6nc1e1wnc4r50',
+      strToScramble = 'string to be scrambled',
+      allowedLetters = ' 0123456789abcdefghijklmnopqrstuvwxyz'
+      __idx = {},
+      __idxMaxlen = 0,
+      __prng = {},
+      __scr = {}
+
+  function guess(key) {
+    return (scrambleStringWithKey(strToScramble, key) === strToMatch)
+  }
+
+  function letterOf(letteridx, str) {
+    return str.split('')[letteridx - 1]
+  }
+
+  function mod(n, m) {
+    return ((n % m) + m) % m;
+    // because javascript's % is remainder, not modulo
+    // -30 % 17 = -13
+    // -30 mod 17 = 4
+  }
+
+  function initIndexVars() {
+    var allowedLettersArr = allowedLetters.split('')
+    for (var i = 0; i < allowedLettersArr.length; i++) {
+      __idxMaxlen++
+      __idx[allowedLettersArr[i]] = i+1
+    }
+  }
+
+  function findIndexOfInAllowed(letter) {
+    return __idx[letter]
+  }
+
+  function clearAllClues() {
+    clearTempClues()
+    __prng.lastrand = 0
+  }
+
+  function clearTempClues() {
+    initScramblerLists('', '')
+    __scr.startseed = 0
+    __prng.lastdigits = 0
+    __prng.random = ''
+  }
+
+  function initScramblerLists(key, text) {
+    __scr.keyidx = []
+    __scr.keylen = key.length
+    for (var i = 1; i <= __scr.keylen; i++) {
+      __scr.keyidx.push(findIndexOfInAllowed(letterOf(i, key)))
+    }
+    __scr.txtidx = []
+    __scr.txtlen = text.length
+    for (var i = 1; i <= __scr.txtlen; i++) {
+      __scr.txtidx.push(findIndexOfInAllowed(letterOf(i, text)))
+    }
+  }
+
+  function scrambleStringWithKey(text, key) {
+    initScramblerLists(key, text)
+    generateInitialSeedUsingKeyList()
+    var t = scrambleTextListUsingPseudorandomsAndKeyList()
+    clearTempClues()
+    return t
+  }
+
+  function generateInitialSeedUsingKeyList() {
+    __scr.startseed = __scr.keylen
+    for (var i = 0; i < __scr.keylen; i++) {
+      // reminder: zero-indexed arrays in js
+      __scr.startseed = ((__scr.startseed * __idxMaxlen) + (__scr.keyidx[i] - 1)) % 4294967290
+    }
+    __scr.startseed += -2147483645
+    if (__scr.startseed > -1) __scr.startseed++
+    initializePseudorandomCycleWithSeed(__scr.startseed)
+  }
+
+  function initializePseudorandomCycleWithSeed(seed) {
+    __prng.lastrand = seed
+  }
+  function nextInPseudorandomSequence() {
+    pseudorandomCycleWithSeed(0)
+  }
+  function pseudorandomCycleWithSeed(seed) {
+    if (seed !== 0) {
+      __prng.lastrand = seed
+      if (seed > 2147483645)
+        __prng.lastrand = 0
+    }
+    if (__prng.lastrand === 0) {
+      __prng.random = ~~Date.now()
+      __prng.random = ((__prng.random * 44831) + 3099) % 4294967311
+      __prng.random = ((__prng.random * 1430713) + 1240931) % 4294967311
+      __prng.random = (((__prng.random * 29036779) + 60899) % 4294967311) - 2147483645
+      __prng.lastrand = __prng.random
+    }
+    if (__prng.lastrand === -1812431566) __prng.lastrand = 0
+    prngCrazyMaths(__prng.lastrand + 2147483645, 2373554875, 2158657949, 4294967291)
+    __prng.random += -2147483645
+    __prng.lastrand = __prng.random
+    if (__prng.lastrand === 0) __prng.lastrand = -1812431566
+    __prng.random = __prng.lastrand
+  }
+
+  function prngCrazyMaths(num1, num2, num3, num4) {
+    // everything's guaranteed to be positive throughout, so I'm not worrying about %
+    if ((num1.toString().length + num2.toString().length) < 14){
+      __prng.random = ((num1 * num2) + num3) % num4
+    } else {
+      if (num1.toString().length > num2.toString().length) {
+        __prng.lastdigits = num1 % 100000
+        __prng.random = Math.floor(num1 / 100000)
+        __prng.lastdigits = ((__prng.lastdigits * num2) + num3) % num4
+        __prng.random = (__prng.random * num2) % num4
+        __prng.random = (__prng.random * 100000) % num4
+        __prng.random = (__prng.random + __prng.lastdigits) % num4
+      } else {
+        __prng.lastdigits = num2 % 100000
+        __prng.random = Math.floor(num2 / 100000)
+        __prng.lastdigits = ((__prng.lastdigits * num1) + num3) % num4
+        __prng.random = (__prng.random * num1) % num4
+        __prng.random = (__prng.random * 100000) % num4
+        __prng.random = (__prng.random + __prng.lastdigits) % num4
+      }
+    }
+  }
+
+  function scrambleTextListUsingPseudorandomsAndKeyList() {
+    var ret = ''
+    for (var i = 0; i < __scr.txtlen; i++) {
+      nextInPseudorandomSequence()
+      ret += letterOf(mod(__prng.random + __scr.txtidx[i] + __scr.keyidx[i % __scr.keylen], __idxMaxlen) + 1, allowedLetters)
+    }
+    return ret
+  }
+
+  initIndexVars()
+  clearAllClues()
+  </script>
+  <style>
+    body {
+      background: #25465a;
+    }
+    #container {
+      width: 400px;
+      position: absolute;
+      left: calc(50% - 200px);
+      top: calc(40% - 100px);
+      border-radius: 8px;
+      background: #dfecf4;
+      padding: 1em 0;
+    }
+    input {
+      display: block;
+      width: 80%;
+      margin: 1em auto;
+      font-size: 1.25em;
+      font-family: 'Monaco', monospace;
+      border: none;
+      border-radius: 3px;
+      box-shadow: 0 0 4px rgba(0,0,0, 0.25);
+      transition: 0.25s;
+    }
+    input:focus {
+      outline: none;
+      box-shadow: 0 0 8px rgba(0,0,0, 0.4);
+    }
+    #target:not([disabled]) {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <input type="text" id="string" placeholder="string" value="string to be scrambled">
+    <input type="text" id="key" placeholder="key" maxlength="20">
+    <input type="text" id="scrambled" placeholder="scrambled" disabled>
+    <input type="text" id="target" disabled value="i89l1qiqz6nc1e1wnc4r50" placeholder="click to reset key">
+  </div>
+  <script>
+    key.oninput = function () {
+      scrambled.value = ((key.value.length === 0 || string.value.length === 0) ?
+        '' : scrambleStringWithKey(string.value, key.value))
+    }
+    string.oninput = function () {
+      if (string.value === 'string to be scrambled') {
+        target.value = 'i89l1qiqz6nc1e1wnc4r50'
+        target.disabled = true
+        scrambled.value = ((key.value.length === 0 || string.value.length === 0) ?
+        '' : scrambleStringWithKey(string.value, key.value))
+      } else {
+        target.value = ''
+        target.disabled = false
+        scrambled.value = ((key.value.length === 0 || string.value.length === 0) ?
+        '' : scrambleStringWithKey(string.value, key.value))
+      }
+    }
+    target.onclick = function () {
+      string.value = 'string to be scrambled'
+      target.value = 'i89l1qiqz6nc1e1wnc4r50'
+      target.disabled = true
+      scrambled.value = ((key.value.length === 0 || string.value.length === 0) ?
+        '' : scrambleStringWithKey(string.value, key.value))
+    }
+  </script>
+</body>
+</html>
